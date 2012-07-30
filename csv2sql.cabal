@@ -1,0 +1,10 @@
+Name:                csv2sql
+Version:             0.0
+Description:         csv convertor to sql
+License:             GPL
+Author:              Evgene Oskin
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+Executable csv2sql
+  Main-is:           SRC/csv2sql.hs
+  Build-Depends:     filepath, directory, regex-posix, old-locale, time, base >= 3 && < 5
