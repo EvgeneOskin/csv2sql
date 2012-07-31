@@ -17,6 +17,6 @@ Runing
 
 $./csv2sql -I path/to/csv/dir -O path/to/sql/dir
 
-"path/to/csv/dir" is a path to directory which contain *.csv files (else it can be a singl file). If path contains " " (space) you should put path into quot ("path").
+"path/to/csv/dir" is a path to directory which contain *.csv files (else it can be a singl file). If path contains " " (space) you should put path into quote ("path").
 
-"path/to/sql/dir" is a path to directory which will contain *.sql files (it mast be path to sigle file (*.sql) if "path/to/csv/dir" is a a path to sigle file (*.csv)). If path contains " " (space) you should put path into quot ("path").
+"path/to/sql/dir" is a path to directory which will contain *.sql files (it mast be path to sigle file (*.sql) if "path/to/csv/dir" is a a path to sigle file (*.csv)). If path contains " " (space) you should put path into quote ("path").
