@@ -11,7 +11,7 @@ module SRC.App.SqlMaker
     import System.Locale
     
     connectorOnce x = 
-        "INSERT INTO prices (ticker, date, open, high, low, clone, volume) VALUES " ++ x ++";"
+        "INSERT INTO prices (ticker, date, open, high, low, close, volume) VALUES " ++ x ++";"
               
     separateStringFirst _ [] = []                                            
     separateStringFirst f (x:xs)
