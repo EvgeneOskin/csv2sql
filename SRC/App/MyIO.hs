@@ -17,7 +17,6 @@ module SRC.App.MyIO
     import System.Directory
     import System.FilePath ((</>))
     import System.Console.GetOpt
-
         
     input_greeting = do
       args <- getArgs
@@ -28,13 +27,20 @@ module SRC.App.MyIO
 
     data Flag = IN String
               | OUT String
+              | HELP
               deriving Show
                 
-    options = [ Option ['I'] [] (ReqArg IN "FILE") "input",
-              Option ['O'] [] (ReqArg OUT "FILE") "output"]
+    options = [ Option ['I'] ["input"] (ReqArg IN "FILE") "input",
+              Option ['O'] ["output"] (ReqArg OUT "FILE") "output",
+              Option ['H'] ["help"] (ReqArg OUT "HELP") "help"]
 
     getFileNames [(IN inFileName), (OUT outFileName)] = convertChoice inFileName outFileName
     getFileNames [(OUT outFileName), (IN inFileName)] = convertChoice inFileName outFileName
+    getFileNames [HELP] = do
+      putStrLn "Version 1.1\nFlags:\n   -I path/to/csv/dir/or/file -O path/to/sql\n   -H (you\'ll see this message)"
+      return True
+    getFileNames _ = getFileNames [HELP]
+    
 
     convertChoice inPath outPath = do
       isDir <- System.Directory.doesDirectoryExist inPath
