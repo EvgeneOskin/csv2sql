@@ -32,7 +32,7 @@ module SRC.App.MyIO
                 
     options = [ Option ['I'] ["input"] (ReqArg IN "FILE") "input",
               Option ['O'] ["output"] (ReqArg OUT "FILE") "output",
-              Option ['H'] ["help"] (ReqArg OUT "HELP") "help"]
+              Option ['H'] ["help"] (NoArg OUT) "help"]
 
     getFileNames [(IN inFileName), (OUT outFileName)] = convertChoice inFileName outFileName
     getFileNames [(OUT outFileName), (IN inFileName)] = convertChoice inFileName outFileName
