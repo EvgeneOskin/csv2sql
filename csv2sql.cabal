@@ -7,4 +7,4 @@ Build-Type:          Simple
 Cabal-Version:       >=1.2
 Executable csv2sql
   Main-is:           SRC/csv2sql.hs
-  Build-Depends:     filepath, directory, regex-posix, old-locale, time, base >= 3 && < 5
+  Build-Depends:     filepath, directory, regex-posix, old-locale, time, split, base >= 3 && < 5
