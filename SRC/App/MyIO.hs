@@ -1,98 +1,117 @@
-module SRC.App.MyIO
-    (
-      input_greeting,
-      convertChoice,
-      convertSingle,
-      mainloop,
-      dirSearch,
-      isCSVFile,
-      nameCSVtoSQL
-    ) where
+module SRC.App.MyIO( mainConvertor
+                   , convertOneFileCsvToSql
+                   , mainConvertLoop
+                   , dirSearchForCsvFiles
+                   , isCsvFile
+                   , processArgs
+                   , run
+) where
 
-    import System.Environment (getArgs)
-    import SRC.App.SqlMaker
-    import System.IO
-    import Text.Regex.Posix
-    import Control.Monad (forM)
-    import System.Directory
-    import System.FilePath ((</>))
-    import System.Console.GetOpt
-        
-    input_greeting = do
-      args <- getArgs
-      case getOpt RequireOrder options args of
-        (flags, nonOpts, msgs) ->do
-                       print flags
-                       getFileNames flags
+import System.Environment (getArgs)
+import SRC.App.SqlMaker
+import System.IO
+import Control.Monad (forM)
+import System.Directory
+import System.FilePath ((</>))
+import System.Console.GetOpt
+import Data.List.Split
+import Text.Regex.Posix
 
-    data Flag = IN String
-              | OUT String
-              | HELP
-              deriving Show
-                
-    options = [ Option ['I'] ["input"] (ReqArg IN "FILE") "input",
-              Option ['O'] ["output"] (ReqArg OUT "FILE") "output",
-              Option ['H'] ["help"] (NoArg OUT) "help"]
+processArgs :: [String] -> IO (Options, [String])
+processArgs argv =
+   case getOpt Permute options argv of
+      (o,n,[]  ) -> return (foldl (flip id) defaultOptions o, n)
+      (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
+   where header = "Usage: csv2sql [OPTION...]"
 
-    getFileNames [(IN inFileName), (OUT outFileName)] = convertChoice inFileName outFileName
-    getFileNames [(OUT outFileName), (IN inFileName)] = convertChoice inFileName outFileName
-    getFileNames [HELP] = do
-      putStrLn "Version 1.1\nFlags:\n   -I path/to/csv/dir/or/file -O path/to/sql\n   -H (you\'ll see this message)"
+data Options = Options
+ { optIn   :: String
+ , optOut  :: String
+ , optHelp :: Bool
+ } deriving Show
+
+defaultOptions :: Options
+defaultOptions  = Options
+ { optIn   = ""
+ , optOut  = ""
+ , optHelp = False
+ }
+
+options :: [OptDescr (Options -> Options)]
+options =
+ [ Option ['I'] ["input"]
+              (ReqArg (\ f opts -> opts { optIn     = f })
+                          "STR") "input path"
+ , Option ['O'] ["output"]
+              (ReqArg (\ f opts -> opts { optOut     = f })
+                          "STR") "output path"
+ , Option ['H'] ["help"]
+               (NoArg (\   opts -> opts { optHelp        = True }))
+               "help"
+  ]
+
+run :: (Options, [String]) -> IO Bool
+run (Options _ _ True, _)  = do
+  let header = "Usage: csv2sql [OPTION...]"
+  putStrLn $ usageInfo header options
+  return True
+run (Options inFileName outFileName _, _) = mainConvertor inFileName outFileName
+
+mainConvertor :: String -> String -> IO Bool
+mainConvertor inPath outPath = do --choice what user type as "input path" dir or file
+  isDir <- System.Directory.doesDirectoryExist inPath
+  if isDir
+    then do
+      dirSearchForCsvFiles inPath outPath
       return True
-    getFileNames _ = getFileNames [HELP]
-    
+    else do
+      isCSV <- isCsvFile inPath
+      if isCSV
+        then convertOneFileCsvToSql inPath outPath
+        else return False
 
-    convertChoice inPath outPath = do
-      isDir <- System.Directory.doesDirectoryExist inPath
-      if isDir
-        then do
-          dirSearch inPath outPath
-          return True
-        else do
-          isCSV <- isCSVFile inPath
-          if isCSV
-            then convertSingle inPath outPath
-            else return (False)
-             
-    convertSingle input output = do
-      inh <- openFile input ReadMode
-      oth <- openFile output WriteMode
-      headString <- hGetLine inh
-      mainloop inh oth
-      hClose inh
-      hClose oth
-      return True
-                      
-    mainloop inh oth = do 
-      ineof <- hIsEOF inh
-      if ineof
-        then return ()
-        else do
-          inpStr <- hGetLine inh
-          let
-              sqlrow = SRC.App.SqlMaker.connectorOnce (SRC.App.SqlMaker.dataToStr (SRC.App.SqlMaker.separateStringMulti (==',') inpStr))
-          hPutStrLn oth sqlrow
-          mainloop inh oth
-        
-    dirSearch topDirI topDirO = do
-      topDirContents <- System.Directory.getDirectoryContents topDirI
-      let properNames = filter (`notElem` [".",".."]) topDirContents
-      forM properNames $ \name -> do
-            let pathI = topDirI </> name
-                pathO = topDirO </> name
-            isDir <- System.Directory.doesDirectoryExist pathI
-            if isDir
-              then do
-                System.Directory.createDirectoryIfMissing True pathO
-                dirSearch pathI pathO
-                return True
-              else do
-                isCSV <- isCSVFile pathI
-                if isCSV
-                  then convertSingle pathI (nameCSVtoSQL pathO)
-                  else return False
-                  
-    isCSVFile x = return (xStr =~ "(.)+[.]csv" :: Bool)
-        where xStr = x :: String
+convertOneFileCsvToSql :: String -> String -> IO Bool
+convertOneFileCsvToSql input output = do
+  inh <- openFile input ReadMode
+  oth <- openFile output WriteMode
+  headString <- hGetLine inh
+  mainConvertLoop inh oth
+  hClose inh
+  hClose oth
+  return True
 
-    nameCSVtoSQL x =  take (length x - 3) x  ++ "sql"
+mainConvertLoop :: Handle -> Handle -> IO ()
+mainConvertLoop inh oth = do 
+  ineof <- hIsEOF inh
+  if ineof
+    then return ()
+    else do
+      inpStr <- hGetLine inh
+      let sqlrow = SRC.App.SqlMaker.convertOneStringScvToSql (SRC.App.SqlMaker.dataToStr (splitOn "," inpStr))
+      hPutStrLn oth sqlrow
+      mainConvertLoop inh oth
+
+dirSearchForCsvFiles :: String -> String -> IO [Bool]
+dirSearchForCsvFiles topDirI topDirO = do
+  topDirContents <- System.Directory.getDirectoryContents topDirI
+  let properNames = filter (`notElem` [".",".."]) topDirContents
+  forM properNames $ \name -> do
+                              let pathI = topDirI </> name
+                                  pathO = topDirO </> name
+                              isDir <- System.Directory.doesDirectoryExist pathI
+                              if isDir
+                                then do
+                                  dirSearchForCsvFiles pathI pathO
+                                  return True
+                                else do
+                                  isCSV <- isCsvFile pathI
+                                  if isCSV
+                                    then do
+                                      System.Directory.createDirectoryIfMissing True topDirO
+                                      convertOneFileCsvToSql pathI (csvFileNameToSqlFileName pathO)
+                                    else return False
+
+isCsvFile :: String -> IO Bool
+isCsvFile x = return (xStr =~ "(.)+[.]csv" :: Bool)
+    where xStr = x :: String
+

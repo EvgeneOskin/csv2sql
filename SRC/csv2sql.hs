@@ -1,3 +1,3 @@
 import SRC.App.MyIO
-
-main = input_greeting
+import System.Environment (getArgs)
+main = getArgs >>= SRC.App.MyIO.processArgs >>= SRC.App.MyIO.run
