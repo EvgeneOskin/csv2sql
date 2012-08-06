@@ -7,7 +7,6 @@ module SRC.App.SqlMaker( convertOneStringScvToSql
 import Data.Time
 import Data.Time.Format
 import System.Locale
-import Text.Regex.Posix
 import Data.List.Split
 
 convertOneStringScvToSql :: String -> String
