@@ -10,8 +10,8 @@ import System.Locale
 import Data.List.Split
 
 convertOneStringScvToSql :: String -> String
-convertOneStringScvToSql x = 
-    "INSERT INTO prices (ticker, date, open, high, low, close, volume) VALUES " ++ x ++";"
+convertOneStringScvToSql x =
+        "INSERT INTO prices (ticker, date, openPrice, highPrice, lowPrice, closePrice, volume) VALUES " ++ x ++";"
 
 changeDateFormat :: String -> String -> String -> String
 changeDateFormat x haveFx needFx = Data.Time.Format.formatTime System.Locale.defaultTimeLocale needFx t
@@ -19,10 +19,11 @@ changeDateFormat x haveFx needFx = Data.Time.Format.formatTime System.Locale.def
 
 dataToStr :: [String] -> String
 dataToStr [a0,a1,a2,a3,a4,a5,a6] = "(\'" ++ a0 ++ "\'," ++
-                                   "\'" ++ (changeDateFormat a1 "%d-%b-%Y" "%Y-%m-%d %H:%M:%S") ++"\'," ++
+                                   "\'" ++ (changeDateFormat a1 "%Y%m%d" "%Y-%m-%d %H:%M:%S") ++"\'," ++
+                                   --"\'" ++ (changeDateFormat a1 "%d-%b-%Y" "%Y-%m-%d %H:%M:%S") ++"\'," ++
                                    "\'" ++ a2 ++ "\'," ++
                                    "\'" ++ a3 ++ "\'," ++
-                                   "\'" ++ a4 ++ "\'" ++
+                                   "\'" ++ a4 ++ "\'," ++
                                    "\'" ++ a5 ++ "\'," ++
                                    "\'" ++ a6 ++ "\')"
 

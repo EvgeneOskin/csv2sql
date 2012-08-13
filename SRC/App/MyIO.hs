@@ -16,6 +16,7 @@ import System.FilePath ((</>))
 import System.Console.GetOpt
 import Data.List.Split
 import Text.Regex.Posix
+import Data.List
 
 processArgs :: [String] -> IO (Options, [String])
 processArgs argv =
@@ -75,7 +76,9 @@ convertOneFileCsvToSql input output = do
   inh <- openFile input ReadMode
   oth <- openFile output WriteMode
   headString <- hGetLine inh
-  mainConvertLoop inh oth
+  if any (\ a-> a=~"[0-9]+.[0-9]*" :: Bool) $ endBy "," headString
+    then convertAndPutOneStringToSql headString inh oth
+    else mainConvertLoop inh oth
   hClose inh
   hClose oth
   return True
@@ -87,10 +90,14 @@ mainConvertLoop inh oth = do
     then return ()
     else do
       inpStr <- hGetLine inh
-      let sqlrow = SRC.App.SqlMaker.convertOneStringScvToSql (SRC.App.SqlMaker.dataToStr (splitOn "," inpStr))
-      hPutStrLn oth sqlrow
-      mainConvertLoop inh oth
-
+      convertAndPutOneStringToSql inpStr inh oth
+                                  
+convertAndPutOneStringToSql inpStr inh oth= do
+  let sqlrow = SRC.App.SqlMaker.convertOneStringScvToSql $ SRC.App.SqlMaker.dataToStr splitedStr
+      splitedStr = endBy "," $ filter (`notElem` "\r\n") inpStr
+  hPutStrLn oth sqlrow
+  mainConvertLoop inh oth
+                      
 dirSearchForCsvFiles :: String -> String -> IO [Bool]
 dirSearchForCsvFiles topDirI topDirO = do
   topDirContents <- System.Directory.getDirectoryContents topDirI
@@ -112,6 +119,6 @@ dirSearchForCsvFiles topDirI topDirO = do
                                     else return False
 
 isCsvFile :: String -> IO Bool
-isCsvFile x = return (xStr =~ "(.)+[.]csv" :: Bool)
+isCsvFile x = return $ ".csv" `isSuffixOf` xStr
     where xStr = x :: String
 
